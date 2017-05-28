@@ -1,6 +1,3 @@
-# nijinsei
-A simple media player with a bit of extra spice
-
 ## Feature implementation plan (may change)
 
 ### Alpha release (planned for 17/10)
@@ -12,5 +9,3 @@ A simple media player with a bit of extra spice
 - Refined UI
 - Video playback
 - Media element management
-
-
