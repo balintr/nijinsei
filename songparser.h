@@ -78,6 +78,9 @@ class SongParser : public QObject
      */
     QThreadPool* _threadPool;
 
+    uint _totalSongs;
+    uint _songsParsed;
+
   public slots:
     /**
      * @brief Start
@@ -85,6 +88,9 @@ class SongParser : public QObject
      * Starts processing the directory containing the songs
      */
     void Start();
+
+  private slots:
+    void ParsingAdvanced(uint, uint);
 
 
   signals:

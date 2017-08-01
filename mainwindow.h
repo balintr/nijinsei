@@ -16,8 +16,13 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
+private slots:
+    void parseProgressed(uint, uint);
+    void startParsing();
+
 private:
     Ui::MainWindow *ui;
+    SongParser* _parser;
 };
 
 #endif // MAINWINDOW_H

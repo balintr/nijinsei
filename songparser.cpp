@@ -2,7 +2,9 @@
 
 SongParser::SongParser(const QString &osuSongPath)
   :_songsDir(osuSongPath),
-   _threadPool(QThreadPool::globalInstance())
+   _threadPool(QThreadPool::globalInstance()),
+   _totalSongs(0),
+   _songsParsed(0)
 {}
 
 void SongParser::Start()
@@ -11,6 +13,8 @@ void SongParser::Start()
   QFuture<void> pathExtending = QtConcurrent::map(directories,
                                                   [this] (QString& data) { data = _songsDir.path() + "/" + data; });
   pathExtending.waitForFinished();
+
+  _totalSongs = directories.size();
 
   qDebug() << "Active threads: " << _threadPool->activeThreadCount();
   qDebug() << "Maximum threads: " << _threadPool->maxThreadCount();
@@ -28,12 +32,18 @@ void SongParser::Start()
 
     qDebug() << "Sub qstringlist last: " << newList.last();
 
-    _threadPool->start(new SongDirectoryParser(newList));
-    //Song song = ParseSong(_songsDir.path() + "/" + *it);
-    //emit advanced(++songsParsed, numberOfSongs);
+    SongDirectoryParser* newParser = new SongDirectoryParser(newList);
+    connect(newParser, SIGNAL(advanced(uint,uint)),
+            this, SLOT(ParsingAdvanced(uint, uint)));
+    _threadPool->start(newParser);
   }
 
   emit finished();
+}
+
+void SongParser::ParsingAdvanced(uint, uint)
+{
+  emit advanced(++_songsParsed, _totalSongs);
 }
 
 SongDirectoryParser::SongDirectoryParser(const QStringList& songDirList)
@@ -43,13 +53,11 @@ SongDirectoryParser::SongDirectoryParser(const QStringList& songDirList)
 
 void SongDirectoryParser::run()
 {
-  qDebug() << "Parsing " << _songDirList.size() << " number of songs!";
-
+  uint totalSongNumber = _songDirList.size();
   for (auto dirIt = _songDirList.cbegin(); dirIt != _songDirList.cend(); ++dirIt)
   {
     bool firstFileVisited = false;
-
-    qDebug() << "Currently parsing: " << *dirIt;
+    uint parsedSongs = 0;
 
     QDir songDir(*dirIt);
     songDir.setNameFilters(QStringList("*.osu"));
@@ -119,6 +127,8 @@ void SongDirectoryParser::run()
       }
       else
         qDebug() << "\tCouldn't open " << *songConfigIt << "\n";
+
+      emit advanced(parsedSongs, totalSongNumber);
     }
   }
 }
