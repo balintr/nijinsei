@@ -58,6 +58,11 @@ QStringList Song::images() const
   return _images;
 }
 
+QString Song::video() const
+{
+  return _video;
+}
+
 void Song::setId(uint id)
 {
   _id = id;
@@ -109,20 +114,26 @@ void Song::addImage(const QString image)
     _images.push_back(image);
 }
 
+void Song::setVideo(const QString video)
+{
+  _video = video;
+}
+
 QString Song::debugString() const
 {
   QString debugStr;
 
-  debugStr.append(QString::number(_id) + "_");
-  debugStr.append(_artist + "_");
-  debugStr.append(_artistUnicode + "_");
-  debugStr.append(_title + "_");
-  debugStr.append(_artistUnicode + "_");
-  debugStr.append(_path + "_");
-  debugStr.append(_dir + "_");
-
+  debugStr.append("Id:" + QString::number(_id) + " ");
+  debugStr.append("Artist:" + _artist + " ");
+  debugStr.append("ArtistUnicode:" + _artistUnicode + " ");
+  debugStr.append("Title:" + _title + " ");
+  debugStr.append("TitleUnicode:" + _titleUnicode + " ");
+  debugStr.append("Path:" + _path + " ");
+  debugStr.append("Dir:" + _dir + " ");
+  debugStr.append("Video:" + _video + " ");
+  debugStr.append("Images:");
   for (auto it = _images.cbegin(); it != _images.cend(); ++it)
-    debugStr.append(*it + "_");
+    debugStr.append(*it + "#");
 
   return debugStr;
 }

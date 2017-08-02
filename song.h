@@ -19,6 +19,7 @@ class Song
     QString path() const;
     QString dir() const;
     QStringList images() const;
+    QString video() const;
 
     void setId(const uint);
     void setArtist(const QString);
@@ -28,6 +29,7 @@ class Song
     void setPath(const QString);
     void setDir(const QString);
     void addImage(const QString);
+    void setVideo(const QString);
 
     QString debugString() const;
 
@@ -40,6 +42,7 @@ class Song
     QString _path;
     QString _dir;
     QStringList _images;
+    QString _video;
 };
 
 #endif // SONG_H
