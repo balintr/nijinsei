@@ -22,7 +22,7 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
-    SongParser* _parser;
+    SongParser::Parser* _parser;
 };
 
 #endif // MAINWINDOW_H

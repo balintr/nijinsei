@@ -16,9 +16,9 @@ void MainWindow::startParsing()
   QString path = ui->lineEdit->text();
 
   if (_parser) delete(_parser);
-  _parser = new SongParser(path);
-   connect(_parser, SIGNAL(advanced(uint,uint)), this, SLOT(parseProgressed(uint, uint)));
-  _parser->Start();
+  _parser = new SongParser::Parser(path);
+   connect(_parser, SIGNAL(progressed(uint,uint)), this, SLOT(parseProgressed(uint, uint)));
+  _parser->start();
 }
 
 void MainWindow::parseProgressed(uint progress, uint total)

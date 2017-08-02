@@ -10,129 +10,133 @@
 
 #include "song.h"
 
-enum class SongMeta {
-  Id,
-  File,
-  Artist,
-  ArtistUnicode,
-  Title,
-  TitleUnicode,
-  Image
-};
-
-const QStringList songPatterns {
-  QString("BeatmapID:\\s*(.+?)\\s*\\r*\\n"),
-  QString("AudioFilename:\\s*(.+?)\\s*\\r*\\n"),
-  QString("Title:\\s*(.+?)\\s*\\r*\\n"),
-  QString("TitleUnicode:\\s*(.+?)\\s*\\r*\\n"),
-  QString("Artist:\\s*(.+?)\\s*\\r*\\n"),
-  QString("ArtistUnicode:\\s*(.+?)\\s*\\r*\\n"),
-  QString("Background and Video events\\r\\n.+\"(.+?)\"")
-};
-
-/**
- * @brief The ConfigParser class
- */
-class SongParser : public QObject
+namespace SongParser
 {
-    Q_OBJECT
+  enum SongMeta {
+    Id,
+    File,
+    Artist,
+    ArtistUnicode,
+    Title,
+    TitleUnicode,
+    Image,
+    Video
+  };
 
-  public:
-    /**
-     * @brief ConfigParser
-     * Deleted default construcor
-     */
-    SongParser() = delete;
-    /**
-     * @brief ConfigParser
-     * Deleted copy constructor
-     */
-    SongParser(SongParser&) = delete;
-    /**
-     * @brief ConfigParser
-     * Deleted move constructor
-     */
-    SongParser(SongParser&&) = delete;
-    /**
-     * @brief ConfigParser
-     * @param songPath
-     *
-     * Constructor which takes a song directory path as parameter.
-     * The only way to set a path to the ConfigParser object.
-     */
-    SongParser(const QString&);
+  const QHash<int, QRegularExpression> SongPatterns {
+    {SongMeta::Id, QRegularExpression(QString("BeatmapID:\\s*(.+?)\\s*\\r*\\n"))},
+    {SongMeta::File, QRegularExpression(QString("AudioFilename:\\s*(.+?)\\s*\\r*\\n"))},
+    {SongMeta::Artist, QRegularExpression(QString("Title:\\s*(.+?)\\s*\\r*\\n"))},
+    {SongMeta::ArtistUnicode, QRegularExpression(QString("TitleUnicode:\\s*(.+?)\\s*\\r*\\n"))},
+    {SongMeta::Title, QRegularExpression(QString("Artist:\\s*(.+?)\\s*\\r*\\n"))},
+    {SongMeta::TitleUnicode, QRegularExpression(QString("ArtistUnicode:\\s*(.+?)\\s*\\r*\\n"))},
+    {SongMeta::Image, QRegularExpression(QString("(?:\\s*,?0,\\s*){2}\"(.+?)\""))},
+    {SongMeta::Video, QRegularExpression(QString("Video\\s*,\\s*0\\s*,\\s*\"(.+?)\""))}
+  };
 
-  private:
+  /**
+   * @brief The ConfigParser class
+   */
+  class Parser : public QObject
+  {
+      Q_OBJECT
 
-    /**
-     * @brief _songsDir
-     *
-     * The root directory where all the song directories can be found.
-     */
-    QDir _songsDir;
-    /**
-     * @brief _threadPool
-     *
-     * Global thread pool used to parse multiple config batches
-     * asynchronously.
-     */
-    QThreadPool* _threadPool;
+    public:
+      /**
+       * @brief ConfigParser
+       * Deleted default construcor
+       */
+      Parser() = delete;
+      /**
+       * @brief ConfigParser
+       * Deleted copy constructor
+       */
+      Parser(Parser&) = delete;
+      /**
+       * @brief ConfigParser
+       * Deleted move constructor
+       */
+      Parser(Parser&&) = delete;
+      /**
+       * @brief ConfigParser
+       * @param songPath
+       *
+       * Constructor which takes a song directory path as parameter.
+       * The only way to set a path to the ConfigParser object.
+       */
+      Parser(const QString&);
 
-    uint _totalSongs;
-    uint _songsParsed;
+    private:
+      /**
+       * @brief _songsDir
+       *
+       * The root directory where all the song directories can be found.
+       */
+      QDir _songsDir;
+      /**
+       * @brief _threadPool
+       *
+       * Global thread pool used to parse multiple config batches
+       * asynchronously.
+       */
+      QThreadPool* _threadPool;
 
-  public slots:
-    /**
-     * @brief Start
-     *
-     * Starts processing the directory containing the songs
-     */
-    void Start();
+      uint _totalSongs;
+      uint _songsParsed;
 
-  private slots:
-    void ParsingAdvanced(uint, uint);
+    public slots:
+      /**
+       * @brief Start
+       *
+       * Starts processing the directory containing the songs
+       */
+      void start();
+
+    private slots:
+      void parsingProgressed(uint, uint);
 
 
-  signals:
-    /**
-     * @brief (signal) finished
-     *
-     * Indicates that the whole root directory has been parsed
-     */
-    void finished();
-    /**
-     * @brief (signal) advanced
-     * @param parsedSongs
-     * @param totalSongs
-     *
-     * Indicates that song parsing advanced by 1
-     * Returns the total number of songs as first and the number of parsed songs so far
-     */
-    void advanced(uint, uint);
-};
+    signals:
+      /**
+       * @brief (signal) finished
+       *
+       * Indicates that the whole root directory has been parsed
+       */
+      void finished();
+      /**
+       * @brief (signal) advanced
+       * @param parsedSongs
+       * @param totalSongs
+       *
+       * Indicates that song parsing advanced by 1
+       * Returns the total number of songs as first and the number of parsed songs so far
+       */
+      void progressed(uint, uint);
+  };
 
-class SongDirectoryParser : public QObject, public QRunnable
-{
-    Q_OBJECT
+  class SongDirectoryParser : public QObject, public QRunnable
+  {
+      Q_OBJECT
 
-  public:
-    SongDirectoryParser(const QStringList&);
-    SongDirectoryParser() = delete;
-    SongDirectoryParser(SongDirectoryParser&) = delete;
-    SongDirectoryParser(SongDirectoryParser&&) = delete;
-    virtual ~SongDirectoryParser() = default;
+    public:
+      SongDirectoryParser(const QStringList&);
+      SongDirectoryParser() = delete;
+      SongDirectoryParser(SongDirectoryParser&) = delete;
+      SongDirectoryParser(SongDirectoryParser&&) = delete;
+      virtual ~SongDirectoryParser() = default;
 
-  signals:
-    void finished(QVector<Song>*);
-    void advanced(uint, uint);
+    signals:
+      void finished(QVector<Song>*);
+      void progressed(uint, uint);
 
-  protected:
-    virtual void run();
+    protected:
+      virtual void run();
 
-  private:
-    QVector<Song>* _songs;
-    const QStringList _songDirList;
-};
+    private:
+      QVector<Song>* _songs;
+      const QStringList _songDirList;
+  };
 
+} // namespace Song
 
 #endif // SONGPARSER_H

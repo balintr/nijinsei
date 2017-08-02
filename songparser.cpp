@@ -1,49 +1,61 @@
 #include "songparser.h"
 
-SongParser::SongParser(const QString &osuSongPath)
+using namespace SongParser;
+
+Parser::Parser(const QString &osuSongPath)
   :_songsDir(osuSongPath),
    _threadPool(QThreadPool::globalInstance()),
    _totalSongs(0),
    _songsParsed(0)
 {}
 
-void SongParser::Start()
+void Parser::start()
 {
   QStringList directories = _songsDir.entryList(QDir::AllDirs | QDir::NoDotAndDotDot);
   QFuture<void> pathExtending = QtConcurrent::map(directories,
                                                   [this] (QString& data) { data = _songsDir.path() + "/" + data; });
   pathExtending.waitForFinished();
 
-  _totalSongs = directories.size();
+  int freeThreads = _threadPool->maxThreadCount() - _threadPool->activeThreadCount();
+  qDebug() << "Free threads: " << freeThreads;
 
-  qDebug() << "Active threads: " << _threadPool->activeThreadCount();
-  qDebug() << "Maximum threads: " << _threadPool->maxThreadCount();
-  qDebug() << "First dir: " << directories.first();
+  _totalSongs = directories.length();
+  int maxSliceSize = directories.length() / freeThreads;
 
-  for (int threads = _threadPool->activeThreadCount(); threads != _threadPool->maxThreadCount(); ++threads)
+  qDebug() << "Max slice: " << maxSliceSize;
+  QStringList::iterator begin;
+  QStringList::iterator end;
+  // TODO: random crash ?
+  for (int slice = 0; slice < maxSliceSize; ++slice)
   {
-    int maxSliceSize = directories.size() / (_threadPool->maxThreadCount() - _threadPool->activeThreadCount());
-
     QStringList newList;
-    for (auto shittyIt = directories.begin(); shittyIt != directories.begin() + maxSliceSize; ++shittyIt)
+
+    begin = (directories.begin() + (slice * maxSliceSize));
+    if (begin == directories.end())
+      break;
+
+    if (slice == maxSliceSize - 1)
+      end = directories.end();
+    else
+      end = (directories.begin() + ((slice + 1) * maxSliceSize));
+
+    for (auto shittyIt = begin; shittyIt != end; ++shittyIt)
     {
       newList.push_back(*shittyIt);
     }
 
-    qDebug() << "Sub qstringlist last: " << newList.last();
-
     SongDirectoryParser* newParser = new SongDirectoryParser(newList);
-    connect(newParser, SIGNAL(advanced(uint,uint)),
-            this, SLOT(ParsingAdvanced(uint, uint)));
+    connect(newParser, SIGNAL(progressed(uint, uint)),
+            this, SLOT(parsingProgressed(uint, uint)));
     _threadPool->start(newParser);
   }
 
   emit finished();
 }
 
-void SongParser::ParsingAdvanced(uint, uint)
+void Parser::parsingProgressed(uint, uint)
 {
-  emit advanced(++_songsParsed, _totalSongs);
+  emit progressed(++_songsParsed, _totalSongs);
 }
 
 SongDirectoryParser::SongDirectoryParser(const QStringList& songDirList)
@@ -53,9 +65,13 @@ SongDirectoryParser::SongDirectoryParser(const QStringList& songDirList)
 
 void SongDirectoryParser::run()
 {
-  uint totalSongNumber = _songDirList.size();
-  for (auto dirIt = _songDirList.cbegin(); dirIt != _songDirList.cend(); ++dirIt)
+  uint totalSongNumber = _songDirList.length();
+  qDebug() << "Total songs: " << totalSongNumber;
+  for (auto dirIt = _songDirList.cbegin();
+       dirIt != _songDirList.cend();
+       ++dirIt)
   {
+    qDebug() << "Parsing: " << *dirIt;
     bool firstFileVisited = false;
     uint parsedSongs = 0;
 
@@ -65,6 +81,8 @@ void SongDirectoryParser::run()
     Song song;
     song.setDir(songDir.absolutePath());
 
+    QRegularExpressionMatch match;
+
     QStringList songConfigFiles = songDir.entryList(QDir::Files);
     for (auto songConfigIt = songConfigFiles.cbegin();
              songConfigIt != songConfigFiles.cend();
@@ -73,22 +91,19 @@ void SongDirectoryParser::run()
       QFile currentSongConfig(songDir.path() + "/" + *songConfigIt);
       if (currentSongConfig.open(QIODevice::ReadOnly))
       {
-        qDebug() << "\tConfig: " << *songConfigIt << "\n";
-
         QString content(currentSongConfig.readAll());
 
-        QRegularExpression regexp;
-        QRegularExpressionMatch match;
         if (!firstFileVisited)
         {
           firstFileVisited = true;
-          for (int i = 0; i < songPatterns.size(); ++i)
+          for (int songMetaEnum = SongMeta::Id;
+               songMetaEnum != SongMeta::Video;
+               ++songMetaEnum)
           {
-            regexp.setPattern(songPatterns.at(i));
-            match = regexp.match(&content);
+            match = SongPatterns[songMetaEnum].match(&content);
             if (match.hasMatch())
             {
-              switch((SongMeta) i)
+              switch(songMetaEnum)
               {
                 case SongMeta::Id:
                   song.setId(match.captured(1).toUInt());
@@ -110,25 +125,35 @@ void SongDirectoryParser::run()
                   break;
                 case SongMeta::Image:
                   song.addImage(match.captured(1));
+                  break;
+                case SongMeta::Video:
+                  song.setVideo(match.captured(1));
               }
             }
           }
         }
         else
         {
-          regexp.setPattern(songPatterns.at((int) SongMeta::Image));
-          match = regexp.match(&content);
+          match = SongPatterns[SongMeta::Image].match(&content);
           if (match.hasMatch())
           {
             song.addImage(match.captured(1));
           }
-        }
 
+          match = SongPatterns[SongMeta::Video].match(&content);
+          if (match.hasMatch())
+          {
+            song.setVideo(match.captured(1));
+          }
+        }
       }
       else
         qDebug() << "\tCouldn't open " << *songConfigIt << "\n";
 
-      emit advanced(parsedSongs, totalSongNumber);
     }
+
+    qDebug() << song.debugString();
+    emit progressed(parsedSongs, totalSongNumber);
   }
 }
+
