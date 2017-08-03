@@ -1,6 +1,6 @@
 #include "songparser.h"
 
-using namespace SongParser;
+namespace SongParser {
 
 Parser::Parser(const QString &osuSongPath)
   :_songsDir(osuSongPath),
@@ -16,10 +16,13 @@ void Parser::start()
                                                   [this] (QString& data) { data = _songsDir.path() + "/" + data; });
   pathExtending.waitForFinished();
 
+  _totalSongs = directories.length();
+
   int freeThreads = _threadPool->maxThreadCount() - _threadPool->activeThreadCount();
+  if (freeThreads == 0)
+    freeThreads = 1;
   qDebug() << "Free threads: " << freeThreads;
 
-  _totalSongs = directories.length();
   int maxSliceSize = directories.length() / freeThreads;
 
   qDebug() << "Max slice: " << maxSliceSize;
@@ -65,33 +68,28 @@ SongDirectoryParser::SongDirectoryParser(const QStringList& songDirList)
 
 void SongDirectoryParser::run()
 {
-  uint totalSongNumber = _songDirList.length();
+  const uint totalSongNumber = _songDirList.length();
   qDebug() << "Total songs: " << totalSongNumber;
-  for (auto dirIt = _songDirList.cbegin();
-       dirIt != _songDirList.cend();
-       ++dirIt)
+  for (const auto &dirStr : _songDirList)
   {
-    qDebug() << "Parsing: " << *dirIt;
+    qDebug() << "Parsing: " << dirStr;
     bool firstFileVisited = false;
     uint parsedSongs = 0;
 
-    QDir songDir(*dirIt);
-    songDir.setNameFilters(QStringList("*.osu"));
-
+    QDir songDir(dirStr);
     Song song;
     song.setDir(songDir.absolutePath());
 
     QRegularExpressionMatch match;
 
-    QStringList songConfigFiles = songDir.entryList(QDir::Files);
-    for (auto songConfigIt = songConfigFiles.cbegin();
-             songConfigIt != songConfigFiles.cend();
-             ++songConfigIt)
+    const QStringList songConfigFiles =
+      songDir.entryList(QStringList("*.osu"), QDir::Files);
+    for (const auto &songConfig : songConfigFiles)
     {
-      QFile currentSongConfig(songDir.path() + "/" + *songConfigIt);
+      QFile currentSongConfig(songDir.path() + "/" + songConfig);
       if (currentSongConfig.open(QIODevice::ReadOnly))
       {
-        QString content(currentSongConfig.readAll());
+        const QString content(currentSongConfig.readAll());
 
         if (!firstFileVisited)
         {
@@ -100,10 +98,10 @@ void SongDirectoryParser::run()
                songMetaEnum != SongMeta::Video;
                ++songMetaEnum)
           {
-            match = SongPatterns[songMetaEnum].match(&content);
+            match = songPatterns[songMetaEnum].match(&content);
             if (match.hasMatch())
             {
-              switch(songMetaEnum)
+              switch (songMetaEnum)
               {
                 case SongMeta::Id:
                   song.setId(match.captured(1).toUInt());
@@ -128,19 +126,22 @@ void SongDirectoryParser::run()
                   break;
                 case SongMeta::Video:
                   song.setVideo(match.captured(1));
+                  break;
+                default:
+                  Q_ASSERT(0);
               }
             }
           }
         }
         else
         {
-          match = SongPatterns[SongMeta::Image].match(&content);
+          match = songPatterns[SongMeta::Image].match(&content);
           if (match.hasMatch())
           {
             song.addImage(match.captured(1));
           }
 
-          match = SongPatterns[SongMeta::Video].match(&content);
+          match = songPatterns[SongMeta::Video].match(&content);
           if (match.hasMatch())
           {
             song.setVideo(match.captured(1));
@@ -148,12 +149,14 @@ void SongDirectoryParser::run()
         }
       }
       else
-        qDebug() << "\tCouldn't open " << *songConfigIt << "\n";
+        qDebug() << "\tCouldn't open " << songConfig << "\n";
 
     }
+    ++parsedSongs;
 
     qDebug() << song.debugString();
     emit progressed(parsedSongs, totalSongNumber);
   }
 }
 
+} // namespace SongParser

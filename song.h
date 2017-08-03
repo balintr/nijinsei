@@ -22,14 +22,14 @@ class Song
     QString video() const;
 
     void setId(const uint);
-    void setArtist(const QString);
-    void setArtistUnicode(const QString);
-    void setTitle(const QString);
-    void setTitleUnicode(const QString);
-    void setPath(const QString);
-    void setDir(const QString);
-    void addImage(const QString);
-    void setVideo(const QString);
+    void setArtist(const QString&);
+    void setArtistUnicode(const QString&);
+    void setTitle(const QString&);
+    void setTitleUnicode(const QString&);
+    void setPath(const QString&);
+    void setDir(const QString&);
+    void addImage(const QString&);
+    void setVideo(const QString&);
 
     QString debugString() const;
 

@@ -13,7 +13,7 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget *parent = 0);
+    explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
 private slots:
@@ -21,7 +21,7 @@ private slots:
     void startParsing();
 
 private:
-    Ui::MainWindow *ui;
+    Ui::MainWindow* ui;
     SongParser::Parser* _parser;
 };
 

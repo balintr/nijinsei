@@ -23,7 +23,7 @@ namespace SongParser
     Video
   };
 
-  const QHash<int, QRegularExpression> SongPatterns {
+  const QHash<int, QRegularExpression> songPatterns {
     {SongMeta::Id, QRegularExpression(QString("BeatmapID:\\s*(.+?)\\s*\\r*\\n"))},
     {SongMeta::File, QRegularExpression(QString("AudioFilename:\\s*(.+?)\\s*\\r*\\n"))},
     {SongMeta::Artist, QRegularExpression(QString("Title:\\s*(.+?)\\s*\\r*\\n"))},
@@ -44,6 +44,14 @@ namespace SongParser
     public:
       /**
        * @brief ConfigParser
+       * @param songPath
+       *
+       * Constructor which takes a song directory path as parameter.
+       * The only way to set a path to the ConfigParser object.
+       */
+      Parser(const QString&);
+      /**
+       * @brief ConfigParser
        * Deleted default construcor
        */
       Parser() = delete;
@@ -57,14 +65,6 @@ namespace SongParser
        * Deleted move constructor
        */
       Parser(Parser&&) = delete;
-      /**
-       * @brief ConfigParser
-       * @param songPath
-       *
-       * Constructor which takes a song directory path as parameter.
-       * The only way to set a path to the ConfigParser object.
-       */
-      Parser(const QString&);
 
     private:
       /**

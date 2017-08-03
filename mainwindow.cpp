@@ -13,7 +13,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
 void MainWindow::startParsing()
 {
-  QString path = ui->lineEdit->text();
+  const QString path = ui->lineEdit->text();
 
   if (_parser) delete(_parser);
   _parser = new SongParser::Parser(path);

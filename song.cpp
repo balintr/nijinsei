@@ -1,21 +1,20 @@
 #include "song.h"
+#include <algorithm>
 
 Song::Song()
   :_id(-1),
-   _title(QString()),
-   _titleUnicode(QString()),
-   _artist(QString()),
-   _artistUnicode(QString()),
-   _path(QString()),
-   _dir(QString()),
-   _images(QStringList())
+   _title(),
+   _titleUnicode(),
+   _artist(),
+   _artistUnicode(),
+   _path(),
+   _dir(),
+   _images()
 {
-
 }
 
 Song::~Song()
 {
-
 }
 
 uint Song::id() const
@@ -30,7 +29,7 @@ QString Song::artist() const
 
 QString Song::artistUnicode() const
 {
-  return _artist;
+  return _artistUnicode;
 }
 
 QString Song::title() const
@@ -40,7 +39,7 @@ QString Song::title() const
 
 QString Song::titleUnicode() const
 {
-  return _title;
+  return _titleUnicode;
 }
 
 QString Song::path() const
@@ -68,53 +67,43 @@ void Song::setId(uint id)
   _id = id;
 }
 
-void Song::setArtist(const QString artist)
+void Song::setArtist(const QString& artist)
 {
   _artist = artist;
 }
 
-void Song::setArtistUnicode(const QString artistUnicode)
+void Song::setArtistUnicode(const QString& artistUnicode)
 {
   _artistUnicode = artistUnicode;
 }
 
-void Song::setTitle(const QString title)
+void Song::setTitle(const QString& title)
 {
   _title = title;
 }
 
-void Song::setTitleUnicode(const QString titleUnicode)
+void Song::setTitleUnicode(const QString& titleUnicode)
 {
   _titleUnicode = titleUnicode;
 }
 
-void Song::setPath(const QString path)
+void Song::setPath(const QString& path)
 {
   _path = path;
 }
 
-void Song::setDir(const QString dir)
+void Song::setDir(const QString& dir)
 {
   _dir = dir;
 }
 
-void Song::addImage(const QString image)
+void Song::addImage(const QString& image)
 {
-  bool imageExists = false;
-  for (auto it = _images.cbegin(); it != _images.cend(); ++it)
-  {
-    if (*it == image)
-    {
-      imageExists = true;
-      break;
-    }
-  }
-
-  if (!imageExists)
+  if (std::find(_images.cbegin(), _images.cend(), image) == _images.cend())
     _images.push_back(image);
 }
 
-void Song::setVideo(const QString video)
+void Song::setVideo(const QString& video)
 {
   _video = video;
 }
@@ -132,8 +121,8 @@ QString Song::debugString() const
   debugStr.append("Dir:" + _dir + " ");
   debugStr.append("Video:" + _video + " ");
   debugStr.append("Images:");
-  for (auto it = _images.cbegin(); it != _images.cend(); ++it)
-    debugStr.append(*it + "#");
+  for (const auto& img : _images)
+    debugStr.append(img + "#");
 
   return debugStr;
 }
