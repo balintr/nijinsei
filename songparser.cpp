@@ -1,4 +1,6 @@
 #include "songparser.h"
+#include <algorithm>
+#include <cmath>
 
 namespace SongParser {
 
@@ -23,26 +25,19 @@ void Parser::start()
     freeThreads = 1;
   qDebug() << "Free threads: " << freeThreads;
 
-  int maxSliceSize = directories.length() / freeThreads;
+  const int maxSliceSize =
+    static_cast<int>(std::round(static_cast<float>(directories.length()) / freeThreads));
 
   qDebug() << "Max slice: " << maxSliceSize;
-  QStringList::iterator begin;
-  QStringList::iterator end;
   // TODO: random crash ?
-  for (int slice = 0; slice < maxSliceSize; ++slice)
+  for (auto dirIt = directories.cbegin(), endIt = directories.cend();
+       dirIt != endIt;
+       dirIt += maxSliceSize)
   {
     QStringList newList;
 
-    begin = (directories.begin() + (slice * maxSliceSize));
-    if (begin == directories.end())
-      break;
-
-    if (slice == maxSliceSize - 1)
-      end = directories.end();
-    else
-      end = (directories.begin() + ((slice + 1) * maxSliceSize));
-
-    for (auto shittyIt = begin; shittyIt != end; ++shittyIt)
+    auto partEndIt = dirIt + std::min(maxSliceSize, endIt - dirIt);
+    for (auto shittyIt = dirIt; shittyIt != partEndIt; ++shittyIt)
     {
       newList.push_back(*shittyIt);
     }
@@ -64,7 +59,9 @@ void Parser::parsingProgressed(uint, uint)
 SongDirectoryParser::SongDirectoryParser(const QStringList& songDirList)
   :_songs(nullptr),
    _songDirList(songDirList)
-{}
+{
+  setAutoDelete(true);
+}
 
 void SongDirectoryParser::run()
 {
